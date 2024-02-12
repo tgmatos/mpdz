@@ -7,11 +7,11 @@ pub const Reader = std.net.Stream.Reader;
 const PlaybackError = error{ PauseFailure, BadSongIndex, NotPlaying, GeneralError, ReadError };
 
 pub fn pause(writer: Writer) anyerror!void {
-    _ = try writer.writeAll("pause\n");
+    try writer.writeAll("pause\n");
 }
 
 pub fn play(writer: Writer, reader: Reader, pos: u32) anyerror!void {
-    _ = try writer.print("play {d}\n", .{pos});
+    try writer.print("play {d}\n", .{pos});
 
     var resp = try utils.getResponse(reader);
     if (!std.mem.eql(u8, resp[0..2], "OK")) {

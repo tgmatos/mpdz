@@ -6,12 +6,12 @@ const Writer = std.net.Stream.Writer;
 const Reader = std.net.Stream.Reader;
 const Stream = std.net.Stream;
 
-const StatusError = error{ parseError, statusNull, numberTooLarge, boolError };
+const StatusError = error{parseError};
 
 const State = enum { play, stop, pause };
 const Result = enum { volume, repeat, random, single, consume, partition, playlist, playlistlength, mixrampdb, state, xfade, song, songid, time, elapsed, bitrate, duration, audio, nextsong, nextsongid, err };
 
-const Status = struct {
+pub const Status = struct {
     const Self = @This();
 
     volume: u32,
@@ -50,89 +50,6 @@ const Status = struct {
             .xfade = undefined,
         };
     }
-
-    pub fn setVolume(self: *Self, writer: Writer, reader: Reader, volume: u32) anyerror!void {
-        var previousVolume = self.volume;
-        self.volume = volume;
-
-        try writer.print("setvol {d}\n", .{self.volume});
-
-        var resp = try utils.getResponse(reader);
-
-        if (!std.mem.eql(u8, resp[0..2], "OK")) {
-            self.volume = previousVolume;
-            return StatusError.numberTooLarge;
-        }
-    }
-
-    pub fn setRepeat(self: *Self, writer: Writer, reader: Reader, repeat: bool) anyerror!void {
-        var previousValue = self.repeat;
-        self.repeat = repeat;
-
-        try writer.print("repeat {d}\n", .{@intFromBool(self.repeat)});
-
-        var resp = try utils.getResponse(reader);
-
-        if (!std.mem.eql(u8, resp[0..2], "OK")) {
-            self.repeat = previousValue;
-            return StatusError.boolError;
-        }
-    }
-
-    pub fn setRandom(self: *Self, writer: Writer, reader: Reader, random: bool) anyerror!void {
-        var previousValue = self.random;
-        self.random = random;
-
-        try writer.print("random {d}\n", .{@intFromBool(self.random)});
-
-        var resp = try utils.getResponse(reader);
-
-        if (!std.mem.eql(u8, resp[0..2], "OK")) {
-            self.random = previousValue;
-            return StatusError.boolError;
-        }
-    }
-
-    pub fn setSingle(self: *Self, writer: Writer, reader: Reader, single: bool) anyerror!void {
-        var previousValue = self.single;
-        self.single = single;
-
-        try writer.print("single {d}\n", .{@intFromBool(self.single)});
-
-        var resp = try utils.getResponse(reader);
-
-        if (!std.mem.eql(u8, resp[0..2], "OK")) {
-            self.single = previousValue;
-            return StatusError.boolError;
-        }
-    }
-
-    pub fn setConsume(self: *Self, writer: Writer, reader: Reader, consume: bool) anyerror!void {
-        var previousValue = self.consume;
-        self.consume = consume;
-
-        try writer.print("consume {d}\n", .{@intFromBool(self.consume)});
-
-        var resp = try utils.getResponse(reader);
-
-        if (!std.mem.eql(u8, resp[0..2], "OK")) {
-            self.consume = previousValue;
-            return StatusError.boolError;
-        }
-    }
-
-    pub fn setMixrampdb(self: *Self, writter: Writer, reader: Reader, value: i32) anyerror!void {
-        var previousValue = self.mixrampdb;
-
-        try writter.print("mixrampdb {d}\n", .{value});
-
-        var resp = try utils.getResponse(reader);
-
-        if (!std.mem.eql(u8, resp[0..2], "OK")) {
-            self.mixrampdb = previousValue;
-            return StatusError.numberTooLarge;
-        }
-    }
 };
 
 fn intToBool(x: u32) bool {
@@ -149,9 +66,9 @@ fn parseInput(input: []u8) anyerror!Status {
         }
 
         var seq = std.mem.splitSequence(u8, line, ": ");
-        var t = std.meta.stringToEnum(Result, seq.first()) orelse .err;
+        var enumResult = std.meta.stringToEnum(Result, seq.first()) orelse .err;
 
-        switch (t) {
+        switch (enumResult) {
             .volume => status.volume = try std.fmt.parseInt(u32, seq.rest(), 10),
             .repeat => status.repeat = intToBool(try std.fmt.parseInt(u32, seq.rest(), 10)),
             .random => status.random = intToBool(try std.fmt.parseInt(u32, seq.rest(), 10)),
@@ -179,7 +96,7 @@ fn parseInput(input: []u8) anyerror!Status {
     return status;
 }
 
-pub fn getStatus(writer: Writer, reader: Reader) !Status {
+pub fn getStatus(writer: Writer, reader: Reader) anyerror!Status {
     var response: [512]u8 = undefined;
 
     try writer.writeAll("status\n");
@@ -207,7 +124,7 @@ test "status" {
 
     std.debug.print("\nRead: {s}", .{read});
 
-    var stt = try getStatus(writer, reader);
+    var stt = getStatus(writer, reader);
 
     //stt.partition = "test";
 
