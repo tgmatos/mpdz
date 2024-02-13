@@ -3,6 +3,8 @@ const std = @import("std");
 pub const Writer = std.net.Stream.Writer;
 pub const Reader = std.net.Stream.Reader;
 
+pub const ParseError = error{parseError};
+
 pub fn getResponse(reader: Reader) anyerror![]u8 {
     var response: [128]u8 = undefined;
     var fbs = std.io.fixedBufferStream(&response);

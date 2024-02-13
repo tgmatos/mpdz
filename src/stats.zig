@@ -5,7 +5,7 @@ const Writer = std.net.Stream.Writer;
 const Reader = std.net.Stream.Reader;
 const Stream = std.net.Stream;
 
-const StatsError = error{parseError};
+const ParseError = utils.ParseError;
 const Result = enum { uptime, playtime, artists, albums, songs, dbPlaytime, dbUpdate, err };
 
 const Stats = struct {
@@ -52,7 +52,7 @@ fn parseInput(input: []u8) anyerror!Stats {
             .songs => stats.songs = try std.fmt.parseInt(u32, seq.rest(), 10),
             .dbPlaytime => stats.dbPlaytime = try std.fmt.parseInt(u32, seq.rest(), 10),
             .dbUpdate => stats.dbUpdate = try std.fmt.parseInt(i64, seq.rest(), 10),
-            .err => return StatsError.parseError,
+            .err => return ParseError.parseError,
         }
     }
 }
@@ -68,7 +68,5 @@ pub fn getStats(writer: Writer, reader: Reader) anyerror!Stats {
         bufferUsed += try reader.read(response[bufferUsed..]);
     }
 
-    var stts = try parseInput(&bufferUsed);
-
-    return stts;
+    return try parseInput(&response);
 }

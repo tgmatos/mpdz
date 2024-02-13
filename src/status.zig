@@ -6,7 +6,7 @@ const Writer = std.net.Stream.Writer;
 const Reader = std.net.Stream.Reader;
 const Stream = std.net.Stream;
 
-const StatusError = error{parseError};
+const ParseError = utils.ParseError;
 
 const State = enum { play, stop, pause };
 const Result = enum { volume, repeat, random, single, consume, partition, playlist, playlistlength, mixrampdb, state, xfade, song, songid, time, elapsed, bitrate, duration, audio, nextsong, nextsongid, err };
@@ -89,7 +89,7 @@ fn parseInput(input: []u8) anyerror!Status {
             .audio => status.audio = seq.rest(),
             .nextsong => status.nextsong = try std.fmt.parseInt(u32, seq.rest(), 10),
             .nextsongid => status.nextsongid = try std.fmt.parseInt(u32, seq.rest(), 10),
-            .err => return StatusError.parseError,
+            .err => return ParseError.parseError,
         }
     }
 
@@ -107,9 +107,7 @@ pub fn getStatus(writer: Writer, reader: Reader) anyerror!Status {
         bufferUsed += try reader.read(response[bufferUsed..]);
     }
 
-    var stt = try parseInput(&response);
-
-    return stt;
+    return try parseInput(&response);
 }
 
 test "status" {
@@ -124,11 +122,16 @@ test "status" {
 
     std.debug.print("\nRead: {s}", .{read});
 
-    var stt = getStatus(writer, reader);
+    var stt = try getStatus(writer, reader);
 
     //stt.partition = "test";
 
-    _ = try stt.setVolume(writer, reader, 100);
+    stt.partition = "test";
+
+    std.debug.print("\nPartition => {s}", .{stt.partition});
+
+    stt.partition = "test2";
+    std.debug.print("\nPartition => {s}", .{stt.partition});
 
     std.debug.print("\n\n", .{});
 }
